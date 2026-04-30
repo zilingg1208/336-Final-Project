@@ -62,26 +62,69 @@ public class RepService {
     // 3️⃣ Add flight
     public static void addFlight(Scanner sc) throws Exception {
         Connection conn = DBConnection.getConnection();
-
+    
         System.out.print("Airline ID: ");
         String aid = sc.next();
-
+    
         System.out.print("Flight #: ");
         int fn = sc.nextInt();
-
+    
         System.out.print("Aircraft ID: ");
         int aircraft = sc.nextInt();
+    
+        System.out.print("Departure Airport (e.g., JFK): ");
+        String dep = sc.next();
+    
+        System.out.print("Destination Airport (e.g., LAX): ");
+        String dest = sc.next();
+    
+        sc.nextLine(); // clear buffer
+    
+        System.out.print("Departure datetime (YYYY-MM-DD HH:MM:SS): ");
+        String depTime = sc.nextLine();
+    
+        System.out.print("Arrival datetime (YYYY-MM-DD HH:MM:SS): ");
+        String arrTime = sc.nextLine();
 
-        String sql = "INSERT INTO Flights (aid, flight_number, aircraft_id) VALUES (?, ?, ?)";
+        System.out.print("Days of week (e.g., Mon,Tue,Wed): ");
+        String days = sc.nextLine();
+        
+        System.out.print("Price: ");
+        double price = sc.nextDouble();
+    
+        System.out.print("Stops: ");
+        int stops = sc.nextInt();
+    
+        System.out.print("Type (domestic/international): ");
+        String type = sc.next();
+
+        Timestamp depTimestamp = Timestamp.valueOf(depTimeInput);
+        Timestamp arrTimestamp = Timestamp.valueOf(arrTimeInput);
+        
+        // ---- FULL INSERT ----
+        String sql = "INSERT INTO Flights (" +
+                "aid, flight_number, aircraft_id, departure_airport, destination_airport, " +
+                "price, stops, type, days_of_week, departure_datetime, arrival_datetime) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    
         PreparedStatement ps = conn.prepareStatement(sql);
-
+    
         ps.setString(1, aid);
         ps.setInt(2, fn);
         ps.setInt(3, aircraft);
+        ps.setString(4, dep);
+        ps.setString(5, dest);
+        ps.setDouble(6, price);
+        ps.setInt(7, stops);
+        ps.setString(8, type);
+        ps.setString(9, days);
+        ps.setTimestamp(10, depTimestamp);
+        ps.setTimestamp(11, arrTimestamp);
 
+    
         ps.executeUpdate();
-
-        System.out.println("Flight added!");
+    
+        System.out.println("Flight added successfully!");
     }
 
     // 4️⃣ Delete flight
