@@ -160,106 +160,117 @@ public class UserService {
 
     public static void bookOrWaitlist(Scanner sc) throws Exception {
         Connection conn = DBConnection.getConnection();
-
+    
         // ---- INPUT ----
         System.out.print("Customer ID: ");
         int cid = sc.nextInt();
-
+    
         System.out.print("Airline ID: ");
         String aid = sc.next();
-
+    
         System.out.print("Flight #: ");
         int fn = sc.nextInt();
-
+    
         System.out.print("Class (economy/business/first): ");
         String seatClass = sc.next();
-
-        // ---- STEP 1: CREATE TICKET FIRST ----
+    
+        // ---- STEP 1: GET FLIGHT PRICE (DYNAMIC) ----
+        String priceSQL = "SELECT price FROM Flights WHERE aid=? AND flight_number=?";
+        PreparedStatement psPrice = conn.prepareStatement(priceSQL);
+        psPrice.setString(1, aid);
+        psPrice.setInt(2, fn);
+    
+        ResultSet rsPrice = psPrice.executeQuery();
+        if (!rsPrice.next()) {
+            System.out.println("Flight not found!");
+            return;
+        }
+    
+        double price = rsPrice.getDouble("price");
+    
+        // ---- STEP 2: CREATE TICKET FIRST ----
         String ticketSQL = "INSERT INTO Tickets (cid, total_fare, booking_fee, purchase_time, type, status) " +
-                "VALUES (?, 300, 20, NOW(), 'one-way', 'pending')";
-
+                           "VALUES (?, ?, 20, NOW(), 'one-way', 'pending')";
+    
         PreparedStatement psTicket = conn.prepareStatement(ticketSQL, Statement.RETURN_GENERATED_KEYS);
         psTicket.setInt(1, cid);
+        psTicket.setDouble(2, price);
         psTicket.executeUpdate();
-
+    
         ResultSet keys = psTicket.getGeneratedKeys();
         keys.next();
         int ticketId = keys.getInt(1);
-
-        // ---- STEP 2: GET CAPACITY ----
+    
+        // ---- STEP 3: GET AIRCRAFT CAPACITY ----
         String capSQL = "SELECT capacity FROM Aircraft WHERE aircraft_id = " +
-                "(SELECT aircraft_id FROM Flights WHERE aid=? AND flight_number=?)";
-
+                        "(SELECT aircraft_id FROM Flights WHERE aid=? AND flight_number=?)";
+    
         PreparedStatement psCap = conn.prepareStatement(capSQL);
         psCap.setString(1, aid);
         psCap.setInt(2, fn);
-
+    
         ResultSet rsCap = psCap.executeQuery();
-
         if (!rsCap.next()) {
             System.out.println("Flight not found!");
             return;
         }
-
+    
         int capacity = rsCap.getInt("capacity");
-
-        // ---- STEP 3: COUNT CURRENT PASSENGERS ----
+    
+        // ---- STEP 4: COUNT CURRENT PASSENGERS ----
         String countSQL = "SELECT COUNT(*) FROM `Includes` WHERE aid=? AND flight_number=?";
         PreparedStatement psCount = conn.prepareStatement(countSQL);
-
         psCount.setString(1, aid);
         psCount.setInt(2, fn);
-
+    
         ResultSet rsCount = psCount.executeQuery();
         rsCount.next();
         int current = rsCount.getInt(1);
-
-        // ---- STEP 4: DECIDE BOOK OR WAIT ----
+    
+        // ---- STEP 5: DECIDE BOOK OR WAIT ----
         if (current >= capacity) {
             // ---- WAITING LIST ----
             System.out.println("Flight full → adding to waiting list");
-
+    
             String waitSQL = "INSERT INTO Waiting_List (ticket_id, aid, flight_number, position) VALUES (?, ?, ?, ?)";
-
+    
             PreparedStatement psWait = conn.prepareStatement(waitSQL);
-
             psWait.setInt(1, ticketId);
             psWait.setString(2, aid);
             psWait.setInt(3, fn);
             psWait.setInt(4, 1); // simple position
-
+    
             psWait.executeUpdate();
-
+    
             // update ticket status
             String updateSQL = "UPDATE Tickets SET status='waiting' WHERE ticket_id=?";
             PreparedStatement psUpdate = conn.prepareStatement(updateSQL);
             psUpdate.setInt(1, ticketId);
             psUpdate.executeUpdate();
-
+    
         } else {
             // ---- NORMAL BOOKING ----
             System.out.println("Booking ticket...");
-
+    
             String incSQL = "INSERT INTO `Includes` " +
                     "(ticket_id, aid, flight_number, departure_datetime, seat_number, class, special_meal) " +
                     "VALUES (?, ?, ?, NOW(), ?, ?, 'none')";
-
+    
             PreparedStatement psInc = conn.prepareStatement(incSQL);
-
             psInc.setInt(1, ticketId);
             psInc.setString(2, aid);
             psInc.setInt(3, fn);
-            psInc.setString(4, "12A"); // simple seat
+            psInc.setString(4, "12A"); // simple seat assignment
             psInc.setString(5, seatClass);
-
+    
             psInc.executeUpdate();
-
+    
             // update ticket status
             String updateSQL = "UPDATE Tickets SET status='active' WHERE ticket_id=?";
             PreparedStatement psUpdate = conn.prepareStatement(updateSQL);
             psUpdate.setInt(1, ticketId);
             psUpdate.executeUpdate();
-
+    
             System.out.println("Ticket booked successfully!");
         }
     }
