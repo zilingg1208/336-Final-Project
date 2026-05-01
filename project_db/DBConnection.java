@@ -4,12 +4,11 @@ import java.sql.DriverManager;
 public class DBConnection {
     public static Connection getConnection() throws Exception {
 
-        // 🔥 ADD THIS LINE (fix)
         Class.forName("com.mysql.cj.jdbc.Driver");
 
         return DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/project_db",
+                "jdbc:mysql://localhost:3306/testproject",
                 "root",
-                "Crystal7n7n");
+                "password");
     }
 }
