@@ -25,7 +25,7 @@ public class AdminService {
     
             // Basic validation
             if (name.isEmpty() || email.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                System.out.println("❌ All fields must be filled.");
+                System.out.println("All fields must be filled.");
                 return;
             }
     
@@ -37,7 +37,7 @@ public class AdminService {
     
             ResultSet rs = psCheck.executeQuery();
             if (rs.next()) {
-                System.out.println("❌ Customer ID or Username already exists.");
+                System.out.println("Customer ID or Username already exists.");
                 return;
             }
     
