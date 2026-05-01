@@ -53,52 +53,87 @@ public class Main {
                 }
 
             } else if (role == 2) {
-                System.out.println(
-                        "1.Add Customer 2.Delete Customer 3.Monthly Sales 4.Res by Flight 5.Res by Customer 6.Revenue Flight 7.Revenue Customer 8.Top Customer 9.Active Flights");
-                int c = sc.nextInt();
+                while (true) {
+                    System.out.println("\n--- Admin Menu ---"); 
+                    System.out.println("1.Add Customer"); 
+                    System.out.println("2.Delete Customer"); 
+                    System.out.println("3.Monthly Sales"); 
+                    System.out.println("4.Res by Flight"); 
+                    System.out.println("5.Res by Customer"); 
+                    System.out.println("6.Revenue Flight"); 
+                    System.out.println("7.Revenue Customer"); 
+                    System.out.println("8.Top Customer"); 
+                    System.out.println("9.Active Flights"); 
+                    System.out.println("10.Back");
+                    
+                    int c = sc.nextInt();
 
-                if (c == 1)
-                    AdminService.addCustomer(sc);
-                if (c == 2)
-                    AdminService.deleteCustomer(sc);
-                if (c == 3)
-                    AdminService.monthlySales(sc);
-                if (c == 4)
-                    AdminService.reservationsByFlight(sc);
-                if (c == 5)
-                    AdminService.reservationsByCustomer(sc);
-                if (c == 6)
-                    AdminService.revenueByFlight();
-                if (c == 7)
-                    AdminService.revenueByCustomer();
-                if (c == 8)
-                    AdminService.topCustomer();
-                if (c == 9)
-                    AdminService.mostActiveFlights();
+                    if (c == 1)
+                        AdminService.addCustomer(sc);
+                    else if (c == 2)
+                        AdminService.deleteCustomer(sc);
+                    else if (c == 3)
+                        AdminService.monthlySales(sc);
+                    else if (c == 4)
+                        AdminService.reservationsByFlight(sc);
+                    else if (c == 5)
+                        AdminService.reservationsByCustomer(sc);
+                    else if (c == 6)
+                        AdminService.revenueByFlight();
+                    else if (c == 7)
+                        AdminService.revenueByCustomer();
+                    else if (c == 8)
+                        AdminService.topCustomer();
+                    else if (c == 9)
+                        AdminService.mostActiveFlights();
+                    else if (c == 10)
+                        break;
+                    else
+                        System.out.println("Invalid option.");
+                    }
 
             } else if (role == 3) {
-                System.out.println(
-                        "1.Make Reservation 2.Edit 3.Add Flight 4.Delete Flight 5.Waiting List 6.Flights by Airport 7.Reply");
-                int c = sc.nextInt();
+                while (true) {
+                    System.out.println("\n--- Rep Menu ---");
+                    System.out.println("1.Make Reservation");
+                    System.out.println("2.Edit Reservation");
+                    System.out.println("3.Add Flight");
+                    System.out.println("4.Delete Flight");
+                    System.out.println("5.Waiting List");
+                    System.out.println("6.Flights by Airport");
+                    System.out.println("7.Reply Question");
+                    System.out.println("8.Back");
 
-                if (c == 1)
-                    RepService.makeReservationForUser(sc);
-                if (c == 2)
-                    RepService.editReservation(sc);
-                if (c == 3)
-                    RepService.addFlight(sc);
-                if (c == 4)
-                    RepService.deleteFlight(sc);
-                if (c == 5)
-                    RepService.viewWaitingList(sc);
-                if (c == 6)
-                    RepService.flightsByAirport(sc);
-                if (c == 7)
-                    RepService.replyQuestion(sc);
-            } else {
-                break;
+                    if (c == 1)
+                        RepService.makeReservationForUser(sc);
+                    else if (c == 2)
+                        RepService.editReservation(sc);
+                    else if (c == 3)
+                        RepService.addFlight(sc);
+                    else if (c == 4)
+                        RepService.deleteFlight(sc);
+                    else if (c == 5)
+                        RepService.viewWaitingList(sc);
+                    else if (c == 6)
+                        RepService.flightsByAirport(sc);
+                    else if (c == 7)
+                        RepService.replyQuestion(sc);
+                    else if (c == 8)
+                        break;
+                    else
+                        System.out.println("Invalid option.");
+                } else if (role == 4) {
+                    System.out.println("Goodbye!");
+                    break;
+                } else {
+                    System.out.println("Invalid role.");
+                }
+            } catch (Exception e) {
+                System.out.println("Invalid input. Try again.");
+                sc.nextLine(); // clear bad input
             }
         }
 
+        sc.close();
     }
 }
