@@ -5,9 +5,9 @@ public class TestConnection {
     public static void main(String[] args) {
         try {
             Connection conn = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/project_db",
+                    "jdbc:mysql://localhost:3306/testproject",
                     "root",
-                    "Crystal7n7n" // ← your MySQL password
+                    "Password" // ← your MySQL password
             );
 
             System.out.println("✅ Connected to database!");
