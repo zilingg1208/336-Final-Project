@@ -21,7 +21,7 @@ SET @@SESSION.SQL_LOG_BIN= 0;
 -- GTID state at the beginning of the backup 
 --
 
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ 'dd3fa478-c56d-11f0-919f-f92ef64b9300:1-2183';
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ 'dd3fa478-c56d-11f0-919f-f92ef64b9300:1-2208';
 
 --
 -- Table structure for table `Aircraft`
@@ -94,34 +94,6 @@ LOCK TABLES `Airports` WRITE;
 /*!40000 ALTER TABLE `Airports` DISABLE KEYS */;
 INSERT INTO `Airports` VALUES ('JFK'),('LAX'),('ORD');
 /*!40000 ALTER TABLE `Airports` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `Customers`
---
-
-DROP TABLE IF EXISTS `Customers`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Customers` (
-  `cid` int NOT NULL,
-  `name` varchar(100) DEFAULT NULL,
-  `email` varchar(100) DEFAULT NULL,
-  `username` varchar(50) DEFAULT NULL,
-  `password` varchar(50) DEFAULT NULL,
-  PRIMARY KEY (`cid`),
-  UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `Customers`
---
-
-LOCK TABLES `Customers` WRITE;
-/*!40000 ALTER TABLE `Customers` DISABLE KEYS */;
-INSERT INTO `Customers` VALUES (1,'Alice','alice@test.com','alice','123'),(2,'Bob','bob@test.com','bob','123'),(3,'Charlie','charlie@test.com','charlie','123');
-/*!40000 ALTER TABLE `Customers` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -219,7 +191,7 @@ CREATE TABLE `Includes` (
 
 LOCK TABLES `Includes` WRITE;
 /*!40000 ALTER TABLE `Includes` DISABLE KEYS */;
-INSERT INTO `Includes` VALUES (1,'AA',101,'2026-05-01 08:00:00','12A','economy','none'),(2,'AA',101,'2026-05-01 08:00:00','12B','business','vegan'),(3,'DL',201,'2026-04-29 13:47:14','12A','economy','none'),(4,'AA',101,'2026-04-29 14:49:59','12B','economy','none');
+INSERT INTO `Includes` VALUES (1,'AA',101,'2026-05-01 08:00:00','12A','economy','none'),(2,'AA',101,'2026-05-01 08:00:00','12B','business','vegan'),(3,'DL',201,'2026-04-29 13:47:14','12A','economy','none'),(4,'AA',101,'2026-04-29 14:49:59','12B','economy','none'),(7,'AA',102,'2026-05-01 11:25:13','13A','economy','none'),(10,'AA',102,'2026-05-01 11:45:48','15A','business','none');
 /*!40000 ALTER TABLE `Includes` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -240,7 +212,7 @@ CREATE TABLE `Questions` (
   PRIMARY KEY (`qid`),
   KEY `cid` (`cid`),
   KEY `eid` (`eid`),
-  CONSTRAINT `questions_ibfk_1` FOREIGN KEY (`cid`) REFERENCES `Customers` (`cid`),
+  CONSTRAINT `questions_ibfk_1` FOREIGN KEY (`cid`) REFERENCES `Users` (`cid`),
   CONSTRAINT `questions_ibfk_2` FOREIGN KEY (`eid`) REFERENCES `Employees` (`eid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -272,8 +244,8 @@ CREATE TABLE `Tickets` (
   `status` varchar(20) DEFAULT 'active',
   PRIMARY KEY (`ticket_id`),
   KEY `cid` (`cid`),
-  CONSTRAINT `tickets_ibfk_1` FOREIGN KEY (`cid`) REFERENCES `Customers` (`cid`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `tickets_ibfk_1` FOREIGN KEY (`cid`) REFERENCES `Users` (`cid`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -282,8 +254,36 @@ CREATE TABLE `Tickets` (
 
 LOCK TABLES `Tickets` WRITE;
 /*!40000 ALTER TABLE `Tickets` DISABLE KEYS */;
-INSERT INTO `Tickets` VALUES (1,1,300.00,20.00,'2026-04-29 13:06:38','one-way','active'),(2,2,320.00,20.00,'2026-04-29 13:06:38','one-way','cancelled'),(3,1,300.00,20.00,'2026-04-29 13:47:14','one-way','active'),(4,3,300.00,20.00,'2026-04-29 14:46:52','one-way','waiting');
+INSERT INTO `Tickets` VALUES (1,1,300.00,20.00,'2026-04-29 13:06:38','one-way','active'),(2,2,320.00,20.00,'2026-04-29 13:06:38','one-way','cancelled'),(3,1,300.00,20.00,'2026-04-29 13:47:14','one-way','active'),(4,3,300.00,20.00,'2026-04-29 14:46:52','one-way','waiting'),(6,1,300.00,20.00,'2026-05-01 11:24:36','one-way','waiting'),(7,1,350.00,20.00,'2026-05-01 11:25:10','one-way','active'),(9,1,300.00,20.00,'2026-05-01 11:45:21','one-way','waiting'),(10,1,350.00,20.00,'2026-05-01 11:45:46','one-way','active');
 /*!40000 ALTER TABLE `Tickets` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `Users`
+--
+
+DROP TABLE IF EXISTS `Users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `Users` (
+  `cid` int NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `password` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`cid`),
+  UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `Users`
+--
+
+LOCK TABLES `Users` WRITE;
+/*!40000 ALTER TABLE `Users` DISABLE KEYS */;
+INSERT INTO `Users` VALUES (1,'Alice','alice@test.com','alice','123'),(2,'Bob','bob@test.com','bob','123'),(3,'Charlie','charlie@test.com','charlie','123');
+/*!40000 ALTER TABLE `Users` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -311,6 +311,7 @@ CREATE TABLE `Waiting_List` (
 
 LOCK TABLES `Waiting_List` WRITE;
 /*!40000 ALTER TABLE `Waiting_List` DISABLE KEYS */;
+INSERT INTO `Waiting_List` VALUES (6,'AA',101,1),(9,'AA',101,2);
 /*!40000 ALTER TABLE `Waiting_List` ENABLE KEYS */;
 UNLOCK TABLES;
 SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
@@ -324,4 +325,4 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-30 20:27:18
+-- Dump completed on 2026-05-01 12:38:01
