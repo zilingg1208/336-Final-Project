@@ -1,15 +1,33 @@
-Airports(
-    airport_id CHAR(3) PRIMARY KEY
+Users(
+    cid INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100),
+    email VARCHAR(100) UNIQUE,
+    username VARCHAR(50) UNIQUE,
+    password VARCHAR(50)
 )
+
+Employees(
+    eid INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE,
+    password VARCHAR(50),
+    role VARCHAR(20)  -- 'admin' or 'rep'
+)
+
 Airlines(
     aid CHAR(2) PRIMARY KEY
 )
+
 Aircraft(
     aircraft_id INT PRIMARY KEY,
     aid CHAR(2),
     capacity INT,
     FOREIGN KEY (aid) REFERENCES Airlines(aid)
 )
+
+Airports(
+    airport_id CHAR(3) PRIMARY KEY
+)
+
 Flights(
     aid CHAR(2),
     flight_number INT,
@@ -18,71 +36,64 @@ Flights(
     destination_airport CHAR(3),
     departure_datetime DATETIME,
     arrival_datetime DATETIME,
-    price DECIMAL(10,2),
+    days_of_week VARCHAR(20),
+    price DOUBLE,
     stops INT,
     type VARCHAR(20),
 
     PRIMARY KEY (aid, flight_number),
+
     FOREIGN KEY (aid) REFERENCES Airlines(aid),
     FOREIGN KEY (aircraft_id) REFERENCES Aircraft(aircraft_id),
     FOREIGN KEY (departure_airport) REFERENCES Airports(airport_id),
     FOREIGN KEY (destination_airport) REFERENCES Airports(airport_id)
 )
-Customers(
-    cid INT PRIMARY KEY,
-    name VARCHAR(50),
-    email VARCHAR(100),
-    username VARCHAR(50),
-    password VARCHAR(50)
-)
+
 Tickets(
     ticket_id INT PRIMARY KEY AUTO_INCREMENT,
     cid INT,
-    total_fare DECIMAL(10,2),
-    booking_fee DECIMAL(10,2),
+    total_fare DOUBLE,
+    booking_fee DOUBLE,
     purchase_time DATETIME,
-    type VARCHAR(20),
-    status VARCHAR(20),
+    type VARCHAR(20),   -- one-way / round
+    status VARCHAR(20), -- active / waiting / cancelled
 
-    FOREIGN KEY (cid) REFERENCES Customers(cid)
+    FOREIGN KEY (cid) REFERENCES Users(cid)
 )
+
 Includes(
     ticket_id INT,
     aid CHAR(2),
     flight_number INT,
     departure_datetime DATETIME,
     seat_number VARCHAR(10),
-    class VARCHAR(20),
+    class VARCHAR(20),         -- economy / business / first
     special_meal VARCHAR(50),
 
     PRIMARY KEY (ticket_id, aid, flight_number),
+
     FOREIGN KEY (ticket_id) REFERENCES Tickets(ticket_id),
     FOREIGN KEY (aid, flight_number) REFERENCES Flights(aid, flight_number)
 )
+
 Waiting_List(
     ticket_id INT,
     aid CHAR(2),
     flight_number INT,
     position INT,
 
-    PRIMARY KEY (ticket_id, aid, flight_number),
+    PRIMARY KEY (ticket_id),
+
     FOREIGN KEY (ticket_id) REFERENCES Tickets(ticket_id),
     FOREIGN KEY (aid, flight_number) REFERENCES Flights(aid, flight_number)
 )
+
 Questions(
     qid INT PRIMARY KEY AUTO_INCREMENT,
     cid INT,
-    eid INT NULL,
     question TEXT,
     response TEXT,
-    status VARCHAR(20),
+    status VARCHAR(20),  -- pending / answered
 
-    FOREIGN KEY (cid) REFERENCES Customers(cid)
+    FOREIGN KEY (cid) REFERENCES Users(cid)
 )
-
-Notes:
-- ticket_id and qid are AUTO_INCREMENT
-- Flights uses composite primary key (aid, flight_number)
-- Includes and Waiting_List depend on both Tickets and Flights
-- eid in Questions represents the employee (customer representative)
-- eid is NULL until a representative responds
