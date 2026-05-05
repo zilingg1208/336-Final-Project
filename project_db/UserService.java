@@ -1,43 +1,18 @@
 import java.sql.*;
-import java.util.Scanner;
 
 public class UserService {
-    public static void searchFlights(Scanner sc) throws Exception {
+    public static void searchFlights(
+            String from, String to,
+            int tripType, int flexible,
+            String depDate,
+            double maxPrice, int maxStops,
+            String airline,
+            String depStart, String depEnd,
+            int sortChoice,
+            String returnDate // for round-trip
+    ) throws Exception {
+
         Connection conn = DBConnection.getConnection();
-
-        System.out.print("From: ");
-        String from = sc.next();
-
-        System.out.print("To: ");
-        String to = sc.next();
-
-        System.out.print("Trip type (1=one-way, 2=round-trip): ");
-        int tripType = sc.nextInt();
-
-        System.out.print("Flexible dates? (1=yes, 0=no): ");
-        int flexible = sc.nextInt();
-
-        System.out.print("Departure date (YYYY-MM-DD): ");
-        String depDate = sc.next();
-
-        // ---- FILTER INPUTS ----
-        System.out.print("Max price (or -1 for no limit): ");
-        double maxPrice = sc.nextDouble();
-
-        System.out.print("Max stops (or -1 for no limit): ");
-        int maxStops = sc.nextInt();
-
-        System.out.print("Airline filter (or 'any'): ");
-        String airline = sc.next();
-
-        System.out.print("Earliest departure time (HH:MM or 'any'): ");
-        String depStart = sc.next();
-
-        System.out.print("Latest departure time (HH:MM or 'any'): ");
-        String depEnd = sc.next();
-
-        System.out.print("Sort by (1=price, 2=takeoff, 3=landing, 4=duration): ");
-        int sortChoice = sc.nextInt();
 
         // ---- BUILD BASE SQL ----
         String sql = "SELECT *, " +
@@ -118,8 +93,6 @@ public class UserService {
 
         // ---- ROUND TRIP ----
         if (tripType == 2) {
-            System.out.print("\nReturn date (YYYY-MM-DD): ");
-            String returnDate = sc.next();
 
             PreparedStatement ps2 = conn.prepareStatement(sql);
 
@@ -158,27 +131,15 @@ public class UserService {
         }
     }
 
-    public static void bookOrWaitlist(Scanner sc) throws Exception {
+    public static void bookOrWaitlist(String aid, int fn, String seatClass, String seat) throws Exception {
+
         Connection conn = DBConnection.getConnection();
 
         try {
-            conn.setAutoCommit(false); // ✅ transaction start
+            conn.setAutoCommit(false);
 
-            System.out.print("Customer ID: ");
-            int cid = sc.nextInt();
-
-            System.out.print("Airline ID: ");
-            String aid = sc.next();
-
-            System.out.print("Flight #: ");
-            int fn = sc.nextInt();
-
-            System.out.print("Class (economy/business/first): ");
-            String seatClass = sc.next();
-
-            // ✅ FIX: ask for seat
-            System.out.print("Seat (e.g., 12A): ");
-            String seat = sc.next();
+            // ✅ use logged-in user instead of asking
+            int cid = ProjectFrame.cid;
 
             // ---- GET PRICE ----
             String priceSQL = "SELECT price FROM Flights WHERE aid=? AND flight_number=?";
@@ -207,33 +168,6 @@ public class UserService {
             keys.next();
             int ticketId = keys.getInt(1);
 
-            // ✅ CHECK SEAT
-            String seatCheckSQL = "SELECT * FROM `Includes` WHERE aid=? AND flight_number=? AND seat_number=?";
-            PreparedStatement psSeat = conn.prepareStatement(seatCheckSQL);
-            psSeat.setString(1, aid);
-            psSeat.setInt(2, fn);
-            psSeat.setString(3, seat);
-
-            while (true) {
-                System.out.print("Seat (e.g., 12A): ");
-                seat = sc.next();
-
-                seatCheckSQL = "SELECT * FROM `Includes` WHERE aid=? AND flight_number=? AND seat_number=?";
-                psSeat = conn.prepareStatement(seatCheckSQL);
-                psSeat.setString(1, aid);
-                psSeat.setInt(2, fn);
-                psSeat.setString(3, seat);
-
-                ResultSet rsSeat = psSeat.executeQuery();
-
-                if (!rsSeat.next()) {
-                    // seat is free
-                    break;
-                }
-
-                System.out.println("❌ Seat already taken. Try again.");
-            }
-
             // ---- CAPACITY ----
             String capSQL = "SELECT capacity FROM Aircraft WHERE aircraft_id = " +
                     "(SELECT aircraft_id FROM Flights WHERE aid=? AND flight_number=?)";
@@ -256,10 +190,23 @@ public class UserService {
             rsCount.next();
             int current = rsCount.getInt(1);
 
-            if (current >= capacity) {
-                System.out.println("Flight full → waiting list");
+            // ---- SEAT CHECK ----
+            String seatCheckSQL = "SELECT 1 FROM `Includes` WHERE aid=? AND flight_number=? AND seat_number=?";
+            PreparedStatement psSeat = conn.prepareStatement(seatCheckSQL);
+            psSeat.setString(1, aid);
+            psSeat.setInt(2, fn);
+            psSeat.setString(3, seat);
 
-                // ✅ FIX: correct position
+            ResultSet rsSeat = psSeat.executeQuery();
+            if (rsSeat.next()) {
+                System.out.println("Seat already taken.");
+                return;
+            }
+
+            // ---- FULL OR NOT ----
+            if (current >= capacity) {
+                System.out.println("Flight full → added to waiting list");
+
                 String posSQL = "SELECT COUNT(*) FROM Waiting_List WHERE aid=? AND flight_number=?";
                 PreparedStatement psPos = conn.prepareStatement(posSQL);
                 psPos.setString(1, aid);
@@ -276,7 +223,6 @@ public class UserService {
                 psWait.setString(2, aid);
                 psWait.setInt(3, fn);
                 psWait.setInt(4, position);
-
                 psWait.executeUpdate();
 
                 PreparedStatement psUpdate = conn.prepareStatement(
@@ -295,7 +241,7 @@ public class UserService {
                 psInc.setInt(1, ticketId);
                 psInc.setString(2, aid);
                 psInc.setInt(3, fn);
-                psInc.setString(4, seat); // ✅ FIX
+                psInc.setString(4, seat);
                 psInc.setString(5, seatClass);
 
                 psInc.executeUpdate();
@@ -308,10 +254,10 @@ public class UserService {
                 System.out.println("Ticket booked!");
             }
 
-            conn.commit(); // ✅ success
+            conn.commit();
 
         } catch (Exception e) {
-            conn.rollback(); // ❗ important
+            conn.rollback();
             System.out.println("Error: " + e.getMessage());
         }
     }
@@ -324,16 +270,20 @@ public class UserService {
                 "WHERE t.cid = ? AND i.departure_datetime >= NOW()";
 
         PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setInt(1, cid);
-
+        ps.setInt(1, ProjectFrame.cid);
+        boolean found = false;
         ResultSet rs = ps.executeQuery();
 
         while (rs.next()) {
+            found = true;
             System.out.println("Upcoming Flight: " +
                     rs.getString("aid") + " " +
                     rs.getInt("flight_number") +
                     " Seat: " + rs.getString("seat_number") +
                     " Time: " + rs.getTimestamp("departure_datetime"));
+        }
+        if (!found) {
+            System.out.println("No upcoming flights.");
         }
     }
 
@@ -379,59 +329,75 @@ public class UserService {
 
         if (rows > 0) {
             System.out.println("Cancelled successfully!");
-            promoteWaitingList(conn);
+
         } else {
             System.out.println("Cannot cancel (economy or not found)");
         }
-    }
+        String getFlightSQL = "SELECT aid, flight_number FROM `Includes` WHERE ticket_id=?";
+        PreparedStatement psGet = conn.prepareStatement(getFlightSQL);
+        psGet.setInt(1, ticketId);
 
-    public static void promoteWaitingList(Connection conn) throws Exception {
-
-        String sql = "SELECT * FROM Waiting_List ORDER BY position LIMIT 1";
-        Statement st = conn.createStatement();
-        ResultSet rs = st.executeQuery(sql);
+        ResultSet rs = psGet.executeQuery();
 
         if (rs.next()) {
-            int tid = rs.getInt("ticket_id");
             String aid = rs.getString("aid");
             int fn = rs.getInt("flight_number");
 
-            System.out.println("Promoting waiting list ticket: " + tid);
-
-            String incSQL = "INSERT INTO `Includes` VALUES (?, ?, ?, NOW(), '12B', 'economy', 'none')";
-            PreparedStatement ps = conn.prepareStatement(incSQL);
-
-            ps.setInt(1, tid);
-            ps.setString(2, aid);
-            ps.setInt(3, fn);
-
-            ps.executeUpdate();
-
-            String delSQL = "DELETE FROM Waiting_List WHERE ticket_id=?";
-            PreparedStatement ps2 = conn.prepareStatement(delSQL);
-            ps2.setInt(1, tid);
-            ps2.executeUpdate();
+            promoteWaitingList(conn, aid, fn); // ✅ pass flight
         }
     }
 
-    public static void askQuestion(Scanner sc) throws Exception {
+    public static void promoteWaitingList(Connection conn, String aid, int fn) throws Exception {
+
+        String sql = "SELECT * FROM Waiting_List WHERE aid=? AND flight_number=? ORDER BY position LIMIT 1";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, aid);
+        ps.setInt(2, fn);
+
+        ResultSet rs = ps.executeQuery();
+
+        if (rs.next()) {
+            int tid = rs.getInt("ticket_id");
+
+            // ✅ alert
+            System.out.println("📢 ALERT: Seat available! Promoting ticket " + tid);
+
+            // insert into Includes
+            String incSQL = "INSERT INTO `Includes` (ticket_id, aid, flight_number, departure_datetime, seat_number, class, special_meal) "
+                    +
+                    "VALUES (?, ?, ?, NOW(), 'AUTO', 'economy', 'none')";
+
+            PreparedStatement ps2 = conn.prepareStatement(incSQL);
+            ps2.setInt(1, tid);
+            ps2.setString(2, aid);
+            ps2.setInt(3, fn);
+            ps2.executeUpdate();
+
+            // remove from waiting list
+            String delSQL = "DELETE FROM Waiting_List WHERE ticket_id=?";
+            PreparedStatement ps3 = conn.prepareStatement(delSQL);
+            ps3.setInt(1, tid);
+            ps3.executeUpdate();
+        }
+    }
+
+    public static void askQuestion(String question) throws Exception {
         Connection conn = DBConnection.getConnection();
 
-        System.out.print("Customer ID: ");
-        int cid = sc.nextInt();
-        sc.nextLine();
+        int cid = ProjectFrame.cid; // use logged-in user
 
-        System.out.print("Question: ");
-        String q = sc.nextLine();
+        if (cid == -1) {
+            System.out.println("❌ User not logged in.");
+            return;
+        }
 
         String sql = "INSERT INTO Questions (cid, question, status) VALUES (?, ?, 'pending')";
         PreparedStatement ps = conn.prepareStatement(sql);
 
         ps.setInt(1, cid);
-        ps.setString(2, q);
+        ps.setString(2, question);
 
         ps.executeUpdate();
-
-        System.out.println("Question sent!");
     }
+
 }
