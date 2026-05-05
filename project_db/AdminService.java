@@ -1,67 +1,208 @@
 import java.sql.*;
 import java.util.Scanner;
 
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+
 public class AdminService {
 
-    public static void addUser(Scanner sc) {
+    public static void addRepresentative(String username, String password) {
         try {
             Connection conn = DBConnection.getConnection();
 
-            System.out.print("Name: ");
-            String name = sc.nextLine();
+            username = username.trim();
+            password = password.trim();
 
-            System.out.print("Email: ");
-            String email = sc.nextLine();
-
-            System.out.print("Username: ");
-            String user = sc.nextLine();
-
-            System.out.print("Password: ");
-            String pass = sc.nextLine();
-
-            // Basic validation
-            if (name.isEmpty() || email.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                System.out.println("All fields must be filled.");
-                return;
-            }
-
-            // Check duplicate ID or username
-            String checkSQL = "SELECT * FROM Users WHERE username=?";
+            String checkSQL = "SELECT * FROM Employees WHERE username=?";
             PreparedStatement psCheck = conn.prepareStatement(checkSQL);
-            psCheck.setString(1, user);
+            psCheck.setString(1, username);
 
             ResultSet rs = psCheck.executeQuery();
             if (rs.next()) {
-                System.out.println("User ID or Username already exists.");
+                System.out.println("❌ Username already exists.");
                 return;
             }
 
-            // Use column names (safe)
+            String sql = "INSERT INTO Employees (username, password, role) VALUES (?, ?, 'rep')";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, username);
+            ps.setString(2, password);
+
+            ps.executeUpdate();
+
+            System.out.println("✅ Representative added!");
+
+        } catch (Exception e) {
+            System.out.println("❌ Error: " + e.getMessage());
+        }
+    }
+
+    public static void editRepresentative(String username, String newUser, String newPass) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            String checkSQL = "SELECT * FROM Employees WHERE username=? AND role='rep'";
+            PreparedStatement psCheck = conn.prepareStatement(checkSQL);
+            psCheck.setString(1, username);
+
+            ResultSet rs = psCheck.executeQuery();
+            if (!rs.next()) {
+                System.out.println("❌ Representative not found.");
+                return;
+            }
+
+            String dupSQL = "SELECT * FROM Employees WHERE username=? AND username<>?";
+            PreparedStatement psDup = conn.prepareStatement(dupSQL);
+            psDup.setString(1, newUser);
+            psDup.setString(2, username);
+
+            ResultSet rsDup = psDup.executeQuery();
+            if (rsDup.next()) {
+                System.out.println("❌ Username already exists.");
+                return;
+            }
+
+            String sql = "UPDATE Employees SET username=?, password=? WHERE username=? AND role='rep'";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, newUser);
+            ps.setString(2, newPass);
+            ps.setString(3, username);
+
+            ps.executeUpdate();
+
+            System.out.println("✅ Representative updated!");
+
+        } catch (Exception e) {
+            System.out.println("❌ Error: " + e.getMessage());
+        }
+    }
+
+    public static void deleteRepresentative(String username) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            String checkSQL = "SELECT * FROM Employees WHERE username=? AND role='rep'";
+            PreparedStatement psCheck = conn.prepareStatement(checkSQL);
+            psCheck.setString(1, username);
+
+            ResultSet rs = psCheck.executeQuery();
+
+            if (!rs.next()) {
+                System.out.println("❌ Representative not found.");
+                return;
+            }
+
+            String sql = "DELETE FROM Employees WHERE username=? AND role='rep'";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, username);
+
+            ps.executeUpdate();
+
+            System.out.println("✅ Representative deleted successfully!");
+
+        } catch (Exception e) {
+            System.out.println("❌ Error: " + e.getMessage());
+        }
+    }
+
+    public static void addUser(String name, String email, String username, String password) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            if (name.isEmpty() || email.isEmpty() || username.isEmpty() || password.isEmpty()) {
+                System.out.println("❌ All fields are required.");
+                return;
+            }
+
+            String checkSQL = "SELECT * FROM Users WHERE username=? OR email=?";
+            PreparedStatement psCheck = conn.prepareStatement(checkSQL);
+            psCheck.setString(1, username);
+            psCheck.setString(2, email);
+
+            ResultSet rs = psCheck.executeQuery();
+            if (rs.next()) {
+                System.out.println("❌ Username or Email already exists.");
+                return;
+            }
+
+            String checkEmpSQL = "SELECT * FROM Employees WHERE username=?";
+            PreparedStatement psCheckEmp = conn.prepareStatement(checkEmpSQL);
+            psCheckEmp.setString(1, username);
+
+            ResultSet rs2 = psCheckEmp.executeQuery();
+            if (rs2.next()) {
+                System.out.println("❌ Username already used by admin/rep.");
+                return;
+            }
+
             String sql = "INSERT INTO Users (name, email, username, password) VALUES (?, ?, ?, ?)";
             PreparedStatement ps = conn.prepareStatement(sql);
 
             ps.setString(1, name);
             ps.setString(2, email);
-            ps.setString(3, user);
-            ps.setString(4, pass);
+            ps.setString(3, username);
+            ps.setString(4, password);
 
             ps.executeUpdate();
 
-            System.out.println("User added!");
+            System.out.println("✅ User created successfully!");
 
         } catch (Exception e) {
-            System.out.println("Error adding user: " + e.getMessage());
+            System.out.println("❌ Error adding user: " + e.getMessage());
         }
     }
 
-    public static void deleteUser(Scanner sc) {
+    public static void editUser(int cid, String name, String email, String username, String password) {
         try {
             Connection conn = DBConnection.getConnection();
 
-            System.out.print("User ID: ");
-            int cid = sc.nextInt();
+            String checkSQL = "SELECT * FROM Users WHERE cid=?";
+            PreparedStatement psCheck = conn.prepareStatement(checkSQL);
+            psCheck.setInt(1, cid);
 
-            // check existence
+            ResultSet rs = psCheck.executeQuery();
+            if (!rs.next()) {
+                System.out.println("❌ User not found.");
+                return;
+            }
+
+            String dupSQL = "SELECT * FROM Users WHERE (username=? OR email=?) AND cid<>?";
+            PreparedStatement psDup = conn.prepareStatement(dupSQL);
+            psDup.setString(1, username);
+            psDup.setString(2, email);
+            psDup.setInt(3, cid);
+
+            ResultSet rsDup = psDup.executeQuery();
+            if (rsDup.next()) {
+                System.out.println("❌ Username or email already used.");
+                return;
+            }
+
+            String sql = "UPDATE Users SET name=?, email=?, username=?, password=? WHERE cid=?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, name);
+            ps.setString(2, email);
+            ps.setString(3, username);
+            ps.setString(4, password);
+            ps.setInt(5, cid);
+
+            ps.executeUpdate();
+
+            System.out.println("✅ User updated successfully!");
+
+        } catch (Exception e) {
+            System.out.println("❌ Error: " + e.getMessage());
+        }
+    }
+
+    public static void deleteUser(int cid) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
             String checkSQL = "SELECT * FROM Users WHERE cid=?";
             PreparedStatement check = conn.prepareStatement(checkSQL);
             check.setInt(1, cid);
@@ -85,16 +226,11 @@ public class AdminService {
         }
     }
 
-    public static void monthlySales(Scanner sc) {
+    public static void monthlySales(int m) {
         try {
             Connection conn = DBConnection.getConnection();
 
-            System.out.print("Month (1-12): ");
-            int m = sc.nextInt();
-
-            String sql = "SELECT SUM(total_fare + booking_fee) AS total " +
-                    "FROM Tickets WHERE MONTH(purchase_time)=?";
-
+            String sql = "SELECT SUM(total_fare + booking_fee) AS total FROM Tickets WHERE MONTH(purchase_time)=?";
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, m);
 
@@ -115,19 +251,11 @@ public class AdminService {
         }
     }
 
-    public static void reservationsByFlight(Scanner sc) {
+    public static void reservationsByFlight(String aid, int fn) {
         try {
             Connection conn = DBConnection.getConnection();
 
-            System.out.print("Airline ID: ");
-            String aid = sc.next();
-
-            System.out.print("Flight #: ");
-            int fn = sc.nextInt();
-
-            String sql = "SELECT ticket_id, seat_number, class " +
-                    "FROM `Includes` WHERE aid=? AND flight_number=?";
-
+            String sql = "SELECT ticket_id, seat_number, class FROM `Includes` WHERE aid=? AND flight_number=?";
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, aid);
             ps.setInt(2, fn);
@@ -152,11 +280,8 @@ public class AdminService {
         }
     }
 
-    public static void reservationsByUser(Scanner sc) throws Exception {
+    public static void reservationsByUser(int cid) throws Exception {
         Connection conn = DBConnection.getConnection();
-
-        System.out.print("Users ID: ");
-        int cid = sc.nextInt();
 
         String sql = "SELECT * FROM Tickets WHERE cid=?";
         PreparedStatement ps = conn.prepareStatement(sql);
@@ -180,15 +305,24 @@ public class AdminService {
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(sql);
 
+            StringBuilder result = new StringBuilder();
+
             while (rs.next()) {
-                System.out.println(
+                result.append(
                         rs.getString("aid") + " " +
                                 rs.getInt("flight_number") +
-                                " | Revenue: $" + rs.getDouble("revenue"));
+                                " | Revenue: $" + rs.getDouble("revenue") + "\n");
             }
 
+            if (result.length() == 0)
+                result.append("No data available.");
+
+            JTextArea area = new JTextArea(result.toString(), 15, 40);
+            area.setEditable(false);
+            JOptionPane.showMessageDialog(null, new JScrollPane(area));
+
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
         }
     }
 
@@ -202,22 +336,25 @@ public class AdminService {
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(sql);
 
-            boolean found = false;
-
-            System.out.println("\n--- Revenue by User ---");
+            StringBuilder result = new StringBuilder("--- Revenue by User ---\n");
 
             while (rs.next()) {
-                found = true;
-                System.out.println("User " + rs.getInt("cid") +
-                        " | Revenue: $" + rs.getDouble("total"));
+                result.append("User ")
+                        .append(rs.getInt("cid"))
+                        .append(" | Revenue: $")
+                        .append(rs.getDouble("total"))
+                        .append("\n");
             }
 
-            if (!found) {
-                System.out.println("No data available.");
-            }
+            if (result.length() == 0)
+                result.append("No data available.");
+
+            JTextArea area = new JTextArea(result.toString(), 15, 40);
+            area.setEditable(false);
+            JOptionPane.showMessageDialog(null, new JScrollPane(area));
 
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
         }
     }
 
@@ -232,14 +369,15 @@ public class AdminService {
             ResultSet rs = st.executeQuery(sql);
 
             if (rs.next()) {
-                System.out.println("Top User: " + rs.getInt("cid") +
-                        " | Revenue: $" + rs.getDouble("total"));
+                JOptionPane.showMessageDialog(null,
+                        "Top User: " + rs.getInt("cid") +
+                                " | Revenue: $" + rs.getDouble("total"));
             } else {
-                System.out.println("No users found.");
+                JOptionPane.showMessageDialog(null, "No users found.");
             }
 
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
         }
     }
 
@@ -255,25 +393,55 @@ public class AdminService {
             Statement st = conn.createStatement();
             ResultSet rs = st.executeQuery(sql);
 
-            boolean found = false;
-
-            System.out.println("\n--- Most Active Flights ---");
+            StringBuilder result = new StringBuilder("--- Most Active Flights ---\n");
 
             while (rs.next()) {
-                found = true;
-
-                System.out.println(
+                result.append(
                         rs.getString("aid") + " " +
                                 rs.getInt("flight_number") +
-                                " | Tickets: " + rs.getInt("total"));
+                                " | Tickets: " + rs.getInt("total") + "\n");
             }
 
-            if (!found) {
-                System.out.println("No flight data available.");
-            }
+            if (result.length() == 0)
+                result.append("No flight data available.");
+
+            JTextArea area = new JTextArea(result.toString(), 15, 40);
+            area.setEditable(false);
+            JOptionPane.showMessageDialog(null, new JScrollPane(area));
 
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
+        }
+    }
+
+    public static void revenueByAirline() {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            String sql = "SELECT aid, SUM(total_fare) AS revenue " +
+                    "FROM `Includes` JOIN Tickets USING(ticket_id) " +
+                    "GROUP BY aid";
+
+            Statement st = conn.createStatement();
+            ResultSet rs = st.executeQuery(sql);
+
+            StringBuilder result = new StringBuilder("--- Revenue by Airline ---\n");
+
+            while (rs.next()) {
+                result.append(
+                        rs.getString("aid") +
+                                " | Revenue: $" + rs.getDouble("revenue") + "\n");
+            }
+
+            if (result.length() == 0)
+                result.append("No data available.");
+
+            JTextArea area = new JTextArea(result.toString(), 15, 40);
+            area.setEditable(false);
+            JOptionPane.showMessageDialog(null, new JScrollPane(area));
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error: " + e.getMessage());
         }
     }
 }
