@@ -13,6 +13,17 @@ public class RepService {
             System.out.print("User ID: ");
             int cid = sc.nextInt();
 
+            // ✅ check user exists
+            String checkUser = "SELECT * FROM Users WHERE cid=?";
+            PreparedStatement psUser = conn.prepareStatement(checkUser);
+            psUser.setInt(1, cid);
+            ResultSet rsUser = psUser.executeQuery();
+
+            if (!rsUser.next()) {
+                System.out.println("❌ User not found.");
+                return;
+            }
+
             System.out.print("Trip type (one-way/round): ");
             String tripType = sc.next();
 
@@ -22,7 +33,7 @@ public class RepService {
             System.out.print("Booking fee: ");
             double fee = sc.nextDouble();
 
-            // ✅ Create ticket first
+            // ✅ create ticket
             String ticketSQL = "INSERT INTO Tickets " +
                     "(cid, total_fare, booking_fee, purchase_time, type, status) " +
                     "VALUES (?, ?, ?, NOW(), ?, 'active')";
@@ -39,28 +50,20 @@ public class RepService {
             keys.next();
             int tid = keys.getInt(1);
 
-            // ✅ Ask how many flights
             System.out.print("How many flights in this reservation? ");
             int numFlights = sc.nextInt();
 
             for (int i = 0; i < numFlights; i++) {
                 System.out.println("\n--- Flight " + (i + 1) + " ---");
-                System.out.print("Airline ID: ");
 
+                System.out.print("Airline ID: ");
                 String aid = sc.next();
+
                 System.out.print("Flight #: ");
                 int fn = sc.nextInt();
-                sc.nextLine(); // clear buffer
 
-                System.out.print("Seat (e.g., 12A): ");
-                String seat = sc.nextLine();
-                System.out.print("Class (economy/business): ");
-                String seatClass = sc.nextLine();
-                System.out.print("Meal (none/veg/etc): ");
-                String meal = sc.nextLine();
-
-                // ✅ 1. Check flight exists + get datetime
-                String checkFlightSQL = "SELECT departure_datetime FROM Flights WHERE aid = ? AND flight_number = ?";
+                // ✅ check flight first
+                String checkFlightSQL = "SELECT departure_datetime FROM Flights WHERE aid=? AND flight_number=?";
                 PreparedStatement psCheck = conn.prepareStatement(checkFlightSQL);
                 psCheck.setString(1, aid);
                 psCheck.setInt(2, fn);
@@ -73,20 +76,35 @@ public class RepService {
 
                 Timestamp depDatetime = rs.getTimestamp("departure_datetime");
 
-                // ✅ 2. Check seat availability
-                String seatCheckSQL = "SELECT * FROM `Includes` WHERE aid = ? AND flight_number = ? AND seat_number = ?";
-                PreparedStatement psSeat = conn.prepareStatement(seatCheckSQL);
-                psSeat.setString(1, aid);
-                psSeat.setInt(2, fn);
-                psSeat.setString(3, seat);
+                // ✅ seat selection
+                String seat;
+                while (true) {
+                    System.out.print("Seat (e.g., 12A): ");
+                    seat = sc.next();
 
-                ResultSet rsSeat = psSeat.executeQuery();
+                    String seatCheckSQL = "SELECT 1 FROM `Includes` WHERE aid=? AND flight_number=? AND seat_number=?";
+                    PreparedStatement psSeat = conn.prepareStatement(seatCheckSQL);
 
-                if (rsSeat.next()) {
-                    throw new Exception("Seat " + seat + " is already taken on flight " + fn);
+                    psSeat.setString(1, aid);
+                    psSeat.setInt(2, fn);
+                    psSeat.setString(3, seat);
+
+                    ResultSet rsSeat = psSeat.executeQuery();
+
+                    if (!rsSeat.next())
+                        break; 
+
+                    System.out.println("❌ Seat already taken. Try another.");
                 }
 
-                // ✅ 3. Insert into Includes
+                // ⚠️ FIX: use next() instead of nextLine()
+                System.out.print("Class (economy/business): ");
+                String seatClass = sc.next();
+
+                System.out.print("Meal (none/veg/etc): ");
+                String meal = sc.next();
+
+                // ✅ insert
                 String incSQL = "INSERT INTO `Includes` " +
                         "(ticket_id, aid, flight_number, departure_datetime, seat_number, class, special_meal) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -106,7 +124,7 @@ public class RepService {
 
             conn.commit();
 
-            System.out.println("\n✅ Reservation created successfully with " + numFlights + " flights!");
+            System.out.println("\n✅ Reservation created successfully!");
 
         } catch (Exception e) {
             try {
@@ -310,7 +328,7 @@ public class RepService {
             System.out.print("Flight #: ");
             int fn = sc.nextInt();
 
-            // ✅ Order by time (FIFO)
+            // ✅ Order by position (FIFO)
             String sql = "SELECT * FROM Waiting_List " +
                     "WHERE aid=? AND flight_number=? " +
                     "ORDER BY position ";
@@ -442,6 +460,327 @@ public class RepService {
 
         } catch (Exception e) {
             System.out.println("❌ Error: " + e.getMessage());
+        }
+    }
+
+    public static void addAircraft(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Aircraft ID: ");
+            int id = sc.nextInt();
+
+            System.out.print("Airline ID: ");
+            String aid = sc.next();
+
+            System.out.print("Capacity: ");
+            int cap = sc.nextInt();
+
+            // 🔍 ensure airline exists
+            String checkAirline = "SELECT * FROM Airlines WHERE aid=?";
+            PreparedStatement psCheck = conn.prepareStatement(checkAirline);
+            psCheck.setString(1, aid);
+
+            ResultSet rs = psCheck.executeQuery();
+            if (!rs.next()) {
+                System.out.println("❌ Airline does not exist.");
+                return;
+            }
+
+            String sql = "INSERT INTO Aircraft (aircraft_id, aid, capacity) VALUES (?, ?, ?)";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setInt(1, id);
+            ps.setString(2, aid);
+            ps.setInt(3, cap);
+
+            ps.executeUpdate();
+
+            System.out.println("✅ Aircraft added!");
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
+        }
+    }
+
+    public static void editAircraft(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Aircraft ID: ");
+            int id = sc.nextInt();
+
+            System.out.print("New Airline ID: ");
+            String aid = sc.next();
+
+            System.out.print("New capacity: ");
+            int cap = sc.nextInt();
+
+            // 🔍 check airline exists
+            String check = "SELECT * FROM Airlines WHERE aid=?";
+            PreparedStatement psCheck = conn.prepareStatement(check);
+            psCheck.setString(1, aid);
+
+            ResultSet rs = psCheck.executeQuery();
+            if (!rs.next()) {
+                System.out.println("❌ Airline not found.");
+                return;
+            }
+
+            String sql = "UPDATE Aircraft SET aid=?, capacity=? WHERE aircraft_id=?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, aid);
+            ps.setInt(2, cap);
+            ps.setInt(3, id);
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                System.out.println("❌ Aircraft not found.");
+            } else {
+                System.out.println("✅ Aircraft updated!");
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
+        }
+    }
+
+    public static void deleteAircraft(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Aircraft ID: ");
+            int id = sc.nextInt();
+
+            // 🔍 check if used in Flights
+            String check = "SELECT * FROM Flights WHERE aircraft_id=?";
+            PreparedStatement psCheck = conn.prepareStatement(check);
+            psCheck.setInt(1, id);
+
+            ResultSet rs = psCheck.executeQuery();
+            if (rs.next()) {
+                System.out.println("❌ Cannot delete — aircraft is used by flights.");
+                return;
+            }
+
+            String sql = "DELETE FROM Aircraft WHERE aircraft_id=?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, id);
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                System.out.println("❌ Aircraft not found.");
+            } else {
+                System.out.println("✅ Aircraft deleted!");
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
+        }
+    }
+
+    public static void addAirport(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Airport ID (e.g., JFK): ");
+            String id = sc.next();
+
+            String sql = "INSERT INTO Airports (airport_id) VALUES (?)";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, id);
+
+            ps.executeUpdate();
+
+            System.out.println("✅ Airport added!");
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
+        }
+    }
+
+    public static void editAirport(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Old Airport ID: ");
+            String oldId = sc.next();
+
+            System.out.print("New Airport ID: ");
+            String newId = sc.next();
+
+            String sql = "UPDATE Airports SET airport_id=? WHERE airport_id=?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, newId);
+            ps.setString(2, oldId);
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                System.out.println("❌ Airport not found.");
+            } else {
+                System.out.println("✅ Airport updated!");
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
+        }
+    }
+
+    public static void deleteAirport(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Airport ID: ");
+            String id = sc.next();
+
+            // 🔍 check usage
+            String check = "SELECT * FROM Flights WHERE departure_airport=? OR destination_airport=?";
+            PreparedStatement psCheck = conn.prepareStatement(check);
+            psCheck.setString(1, id);
+            psCheck.setString(2, id);
+
+            ResultSet rs = psCheck.executeQuery();
+            if (rs.next()) {
+                System.out.println("❌ Cannot delete — airport used in flights.");
+                return;
+            }
+
+            String sql = "DELETE FROM Airports WHERE airport_id=?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, id);
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                System.out.println("❌ Airport not found.");
+            } else {
+                System.out.println("✅ Airport deleted!");
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
+        }
+    }
+
+    public static void editFlight(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Airline ID: ");
+            String aid = sc.next();
+
+            System.out.print("Flight #: ");
+            int fn = sc.nextInt();
+
+            System.out.print("New price: ");
+            double price = sc.nextDouble();
+
+            System.out.print("New stops: ");
+            int stops = sc.nextInt();
+
+            String sql = "UPDATE Flights SET price=?, stops=? WHERE aid=? AND flight_number=?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setDouble(1, price);
+            ps.setInt(2, stops);
+            ps.setString(3, aid);
+            ps.setInt(4, fn);
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                System.out.println("❌ Flight not found.");
+            } else {
+                System.out.println("✅ Flight updated!");
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
+        }
+    }
+
+    public static void addAirline(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Airline ID (e.g., AA): ");
+            String aid = sc.next().toUpperCase();
+
+            // 🔍 prevent duplicate
+            String check = "SELECT * FROM Airlines WHERE aid=?";
+            PreparedStatement psCheck = conn.prepareStatement(check);
+            psCheck.setString(1, aid);
+
+            ResultSet rs = psCheck.executeQuery();
+            if (rs.next()) {
+                System.out.println("❌ Airline already exists.");
+                return;
+            }
+
+            // ✅ insert
+            String sql = "INSERT INTO Airlines (aid) VALUES (?)";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, aid);
+
+            ps.executeUpdate();
+
+            System.out.println("✅ Airline added!");
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
+        }
+    }
+
+    public static void deleteAirline(Scanner sc) {
+        try {
+            Connection conn = DBConnection.getConnection();
+
+            System.out.print("Airline ID: ");
+            String aid = sc.next();
+
+            // 🔍 check aircraft
+            String checkAircraft = "SELECT * FROM Aircraft WHERE aid=?";
+            PreparedStatement psA = conn.prepareStatement(checkAircraft);
+            psA.setString(1, aid);
+
+            ResultSet rsA = psA.executeQuery();
+            if (rsA.next()) {
+                System.out.println("❌ Cannot delete — airline used by aircraft.");
+                return;
+            }
+
+            // 🔍 check flights
+            String checkFlights = "SELECT * FROM Flights WHERE aid=?";
+            PreparedStatement psF = conn.prepareStatement(checkFlights);
+            psF.setString(1, aid);
+
+            ResultSet rsF = psF.executeQuery();
+            if (rsF.next()) {
+                System.out.println("❌ Cannot delete — airline used by flights.");
+                return;
+            }
+
+            // ✅ delete
+            String sql = "DELETE FROM Airlines WHERE aid=?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, aid);
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                System.out.println("❌ Airline not found.");
+            } else {
+                System.out.println("✅ Airline deleted!");
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ " + e.getMessage());
         }
     }
 }
