@@ -37,43 +37,46 @@ The system includes the following tables:
 
 ---
 
-## 👤 User Functionality
+# 👤 User Features
 
 ### ✈️ Flight Search
 - Search flights between two airports  
-- One-way and round-trip options  
+- One-way flights on a specific date  
+- Round-trip flights on specific dates  
 - Flexible date search (±3 days)  
-- Sort by:
-  - Price
-  - Departure time
-  - Arrival time
-  - Duration
-- Filter by:
-  - Price
-  - Stops
-  - Airline
-  - Time range
+- Browse available flights  
+- Sort results by:
+  - Price  
+  - Departure time  
+  - Arrival time  
+  - Duration  
+- Filter flights by:
+  - Price  
+  - Number of stops  
+  - Airline  
+  - Departure/arrival time  
 
 ---
 
-### 🎟️ Reservations
+### 🎟️ Reservations & Tickets
 - Book flights  
-- Automatic **waiting list** if full  
+- Automatically join **waiting list** if flight is full  
 - View:
   - Upcoming flights  
-  - Past flights  
-- Cancel reservations (**only business/first class**)  
+  - Past reservations  
+- Cancel reservations (**only allowed for business/first class**)  
 - Automatic promotion from waiting list when a seat becomes available  
 
 ---
 
-### ❓ Customer Support
+### 🔔 Alerts & Support
+- Receive alert when seat becomes available from waiting list  
 - Submit questions to customer representatives  
 
 ---
 
-## 🛠️ Admin Functionality
-- Add / Edit / Delete:
+# 🛠️ Admin Features
+- Add, edit, and delete:
   - Users  
   - Customer Representatives  
 - Generate reports:
@@ -90,10 +93,10 @@ The system includes the following tables:
 
 ---
 
-## 🧑‍💼 Customer Representative Functionality
+# 🧑‍💼 Customer Representative Features
 - Make reservations on behalf of users  
 - Edit existing reservations  
-- Add / Edit / Delete:
+- Manage system data:
   - Aircraft  
   - Airports  
   - Flights  
@@ -104,6 +107,12 @@ The system includes the following tables:
 
 ---
 
+## ⚙️ How to Run
+
+### 1️⃣ Setup Database
+Open MySQL Workbench and run:
+```sql
+SOURCE project.sql;
 ## ⚙️ How to Run
 
 ### 1️⃣ Setup Database 
