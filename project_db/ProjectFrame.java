@@ -51,59 +51,54 @@ public class ProjectFrame extends JFrame {
         JButton btnAdd = new JButton("Add User");
         btnAdd.setFont(mainFont);
         // add a listener
-        btnAdd.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    Connection conn = ProjectFrame.con; // already initialized
+        btnAdd.addActionListener(e -> {
+            try {
+                Connection conn = ProjectFrame.con;
 
-                    String username = tfuser.getText();
-                    String passwd = tfpasswd.getText();
+                // 🔥 ask for full info
+                String name = JOptionPane.showInputDialog("Enter Name:");
+                String email = JOptionPane.showInputDialog("Enter Email:");
+                String username = JOptionPane.showInputDialog("Enter Username:");
+                String password = JOptionPane.showInputDialog("Enter Password:");
 
-                    String role = null;
+                // ❌ validation
+                if (name == null || email == null || username == null || password == null ||
+                        name.trim().isEmpty() || email.trim().isEmpty() ||
+                        username.trim().isEmpty() || password.trim().isEmpty()) {
 
-                    // ---- CHECK CUSTOMER ----
-                    String query = "SELECT * FROM Users WHERE ";
-                    query += "username='" + user + "' AND password='" + passwd + "'";
-                    ResultSet rs = stmt.executeQuery(query);
-
-                    if (rs.next()) {
-                        role = "users";
-                    } else {
-                        // ---- CHECK EMPLOYEE ----
-                        String empSQL = "SELECT role FROM Employees WHERE username=? AND password=?";
-                        PreparedStatement ps2 = conn.prepareStatement(empSQL);
-                        ps2.setString(1, username);
-                        ps2.setString(2, passwd);
-
-                        ResultSet rs2 = ps2.executeQuery();
-
-                        if (rs2.next()) {
-                            role = rs2.getString("role"); // admin or rep
-                        }
-                    }
-
-                    // ---- HANDLE RESULT ----
-                    if (role != null) {
-                        msg.setText("Welcome " + username);
-
-                        if (role.equalsIgnoreCase("user")) {
-                            new UserMenuFrame(username);
-                        } else if (role.equalsIgnoreCase("admin")) {
-                            new AdminMenuFrame();
-                        } else if (role.equalsIgnoreCase("rep")) {
-                            new RepMenuFrame();
-                        }
-
-                        dispose(); // close login window
-                    } else {
-                        msg.setText("Invalid username or password");
-                    }
-
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    msg.setText("Database error");
+                    msg.setText("All fields required");
+                    return;
                 }
+
+                // 🔍 check duplicate username OR email
+                String checkSQL = "SELECT * FROM Users WHERE username=? OR email=?";
+                PreparedStatement psCheck = conn.prepareStatement(checkSQL);
+                psCheck.setString(1, username);
+                psCheck.setString(2, email);
+
+                ResultSet rs = psCheck.executeQuery();
+
+                if (rs.next()) {
+                    msg.setText("Username or Email already exists");
+                    return;
+                }
+
+                // ✅ insert user
+                String sql = "INSERT INTO Users (name, email, username, password) VALUES (?, ?, ?, ?)";
+                PreparedStatement ps = conn.prepareStatement(sql);
+
+                ps.setString(1, name);
+                ps.setString(2, email);
+                ps.setString(3, username);
+                ps.setString(4, password);
+
+                ps.executeUpdate();
+
+                msg.setText("User created successfully!");
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                msg.setText("Error creating user");
             }
         });
 
