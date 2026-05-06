@@ -299,9 +299,12 @@ public class UserService {
     public static void viewPast(int cid) throws Exception {
         Connection conn = DBConnection.getConnection();
 
-        String sql = "SELECT i.aid, i.flight_number, i.seat_number, i.departure_datetime " +
-                "FROM Tickets t JOIN `Includes` i ON t.ticket_id = i.ticket_id " +
-                "WHERE t.cid = ? AND i.departure_datetime < NOW()";
+        String sql = "SELECT i.aid, i.flight_number, i.seat_number, f.departure_datetime " +
+                "FROM Tickets t " +
+                "JOIN `Includes` i ON t.ticket_id = i.ticket_id " +
+                "JOIN Flights f ON i.aid = f.aid AND i.flight_number = f.flight_number " +
+                "WHERE t.cid = ? AND f.departure_datetime < NOW() " +
+                "ORDER BY f.departure_datetime DESC";
 
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, cid);
@@ -310,13 +313,16 @@ public class UserService {
 
         boolean found = false;
 
+        System.out.println("\n--- Past Flights ---");
+
         while (rs.next()) {
             found = true;
-            System.out.println("Past Flight: " +
+
+            System.out.println(
                     rs.getString("aid") + " " +
-                    rs.getInt("flight_number") +
-                    " Seat: " + rs.getString("seat_number") +
-                    " Time: " + rs.getTimestamp("departure_datetime"));
+                            rs.getInt("flight_number") +
+                            " Seat: " + rs.getString("seat_number") +
+                            " Depart: " + rs.getTimestamp("departure_datetime"));
         }
 
         if (!found) {
