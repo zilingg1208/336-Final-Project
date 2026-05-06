@@ -265,23 +265,32 @@ public class UserService {
     public static void viewUpcoming(int cid) throws Exception {
         Connection conn = DBConnection.getConnection();
 
-        String sql = "SELECT i.aid, i.flight_number, i.seat_number, i.departure_datetime " +
-                "FROM Tickets t JOIN `Includes` i ON t.ticket_id = i.ticket_id " +
-                "WHERE t.cid = ? AND i.departure_datetime >= NOW()";
+        String sql = "SELECT i.aid, i.flight_number, i.seat_number, f.departure_datetime " +
+                "FROM Tickets t " +
+                "JOIN `Includes` i ON t.ticket_id = i.ticket_id " +
+                "JOIN Flights f ON i.aid = f.aid AND i.flight_number = f.flight_number " +
+                "WHERE t.cid = ? AND f.departure_datetime > NOW() " +
+                "ORDER BY f.departure_datetime";
 
         PreparedStatement ps = conn.prepareStatement(sql);
-        ps.setInt(1, ProjectFrame.cid);
-        boolean found = false;
+        ps.setInt(1, cid);
+
         ResultSet rs = ps.executeQuery();
+
+        boolean found = false;
+
+        System.out.println("\n--- Upcoming Flights ---");
 
         while (rs.next()) {
             found = true;
-            System.out.println("Upcoming Flight: " +
+
+            System.out.println(
                     rs.getString("aid") + " " +
-                    rs.getInt("flight_number") +
-                    " Seat: " + rs.getString("seat_number") +
-                    " Time: " + rs.getTimestamp("departure_datetime"));
+                            rs.getInt("flight_number") +
+                            " Seat: " + rs.getString("seat_number") +
+                            " Depart: " + rs.getTimestamp("departure_datetime"));
         }
+
         if (!found) {
             System.out.println("No upcoming flights.");
         }
@@ -330,20 +339,22 @@ public class UserService {
         if (rows > 0) {
             System.out.println("Cancelled successfully!");
 
+            // ✅ ONLY RUN IF CANCELLED
+            String getFlightSQL = "SELECT aid, flight_number FROM `Includes` WHERE ticket_id=?";
+            PreparedStatement psGet = conn.prepareStatement(getFlightSQL);
+            psGet.setInt(1, ticketId);
+
+            ResultSet rs = psGet.executeQuery();
+
+            if (rs.next()) {
+                String aid = rs.getString("aid");
+                int fn = rs.getInt("flight_number");
+
+                promoteWaitingList(conn, aid, fn);
+            }
+
         } else {
             System.out.println("Cannot cancel (economy or not found)");
-        }
-        String getFlightSQL = "SELECT aid, flight_number FROM `Includes` WHERE ticket_id=?";
-        PreparedStatement psGet = conn.prepareStatement(getFlightSQL);
-        psGet.setInt(1, ticketId);
-
-        ResultSet rs = psGet.executeQuery();
-
-        if (rs.next()) {
-            String aid = rs.getString("aid");
-            int fn = rs.getInt("flight_number");
-
-            promoteWaitingList(conn, aid, fn); // ✅ pass flight
         }
     }
 
